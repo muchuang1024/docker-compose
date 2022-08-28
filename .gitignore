@@ -1,0 +1,3 @@
+service/*/data
+service/*/log
+service/mysql/mysql.sock.lock
