@@ -21,3 +21,75 @@ services:
       - ./service/redis/data:/data
       - ./service/redis/log:/log
       - ./service/redis/conf/redis.conf:/etc/redis/redis.conf
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - 3000:3000
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    restart: unless-stopped
+    hostname: zookeeper
+    ports:
+      - 2181:2181
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    volumes:
+      - ./service/zookeeper/data:/data
+      - ./service/zookeeper/log:/logs
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    ports:
+      - 9092:9092
+    environment:
+      KAFKA_BROKER_ID: 0
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 #消费者偏移量主题（默认为__consumer_offsets）的副本数
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092 # 指定Kafka对外部提供服务/监听的地址，需绑定host
+      KAFKA_ADVERTISED_HOST_NAME: kafka # 指定Kafka对外部的主机名或IP地址（通常应该将KAFKA_ADVERTISED_HOST_NAME和KAFKA_ADVERTISED_LISTENERS设置为相同的值，以确保外部客户端能够正确连接到Kafka集群）
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    volumes:
+      - ./service/kafka/data:/var/lib/kafka/data
+    depends_on:
+      - zookeeper
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.1
+    container_name: elasticsearch
+    environment:
+      - "discovery.type=single-node"
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./service/elasticsearch/data:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.15.1
+    container_name: logstash
+    command: ["logstash", "-f", "/usr/share/logstash/pipeline"]
+    volumes:
+      - ./service/logstash/conf:/usr/share/logstash/pipeline
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      KAFKA_SERVERS: "kafka:9092" #kafka容器名
+      ES_SERVERS: "elasticsearch:9200" #elasticsearch容器名
+    depends_on:
+      - kafka
+      - elasticsearch
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.15.1
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - kafka
+      - elasticsearch
+    ports:
+      - 5601:5601
