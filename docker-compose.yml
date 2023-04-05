@@ -58,8 +58,12 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.15.1
     container_name: elasticsearch
     environment:
-      - "discovery.type=single-node"
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+      - cluster.routing.allocation.disk.watermark.low=85% #低水位阈值，当索引存储的磁盘使用率达到低水位时，Elasticsearch 将开始转移索引到其他节点
+      - cluster.routing.allocation.disk.watermark.high=90% #高水位阈值，当索引存储的磁盘使用率达到高水位时，Elasticsearch 将停止向该节点写入，并开始拒绝索引操作，直到使用率降至低水位以下
+      - cluster.routing.allocation.disk.watermark.flood_stage=95% #洪水阶段水位线阈值，当索引存储的磁盘使用率超过了这个阈值，Elasticsearch 将禁用索引写入，并将索引标记为“只读”
+      - cluster.routing.allocation.disk.threshold_enabled=false #禁用 Elasticsearch 索引的磁盘使用率阈值功能
+      - xpack.security.enabled=false #关闭安全提示
     ulimits:
       memlock:
         soft: -1
