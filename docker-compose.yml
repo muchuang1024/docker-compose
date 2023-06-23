@@ -4,7 +4,7 @@ services:
     image: mysql
     container_name: mysql
     ports:
-      - 3307:3306
+      - 3306:3306
     volumes:
       - ./service/mysql:/var/lib/mysql
       - ./service/mysql/conf/my.cnf:/etc/my.cnf
@@ -16,7 +16,7 @@ services:
     container_name: redis
     command: redis-server /etc/redis/redis.conf --appendonly yes
     ports:
-      - 6380:6379
+      - 6379:6379
     volumes: 
       - ./service/redis/data:/data
       - ./service/redis/log:/log
